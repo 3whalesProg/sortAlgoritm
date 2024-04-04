@@ -32,7 +32,7 @@ async function chankCreator(startPosition){ //будем ассинхронно 
             
             fs.readSync(fd, Buffer.alloc(startPosition), 0, startPosition, null); //делаем отступ
             const buffer = Buffer.alloc(1);
-            let bytesRead = 0;
+            let bytesRead = -1;
             while (bytesRead < chankSize) {
                 fs.readSync(fd, buffer, 0, 1, null);
                 
