@@ -15,19 +15,21 @@ function lineSorter(string, charlist){ //сортирует строчку в а
     charlist = Object.fromEntries(Object.entries(charlist).sort((a,b) => a[0].localeCompare(b[0]))) //сортировка в алфовитном порядке
     delete charlist['\n']
     delete charlist['\r'] 
-    return charlist
+    return charlist //на выходе выходит list формата {'a': 123, 'b': 54, 'c': 43, ...}
 }
 
 async function chankCreator(startPosition){ //будем ассинхронно читать файл чанками
     return new Promise((resolve, reject) => {
         let data = ''
         let isLineEnd = false
+        let isFileEnd = false
         const chankSize = 500; //возьмем условный чанк в 500 символов 
         fs.open(inputFile, 'r', (err, fd) => {
             if (err) {
                 reject(err);
                 return;
             }
+            
             fs.readSync(fd, Buffer.alloc(startPosition), 0, startPosition, null); //делаем отступ
             const buffer = Buffer.alloc(1);
             let bytesRead = 0;
@@ -39,18 +41,24 @@ async function chankCreator(startPosition){ //будем ассинхронно 
                     isLineEnd = true //открыли файл и начали читать до момента пока не наберем 500 символов или до конца строки
                     break;
                 }
+
+                if (buffer.toString() == '\x00'){ //файл кончился
+                    isFileEnd = true
+                    isLineEnd = true
+                    resolve({data, isLineEnd, bytesRead, isFileEnd})
+                }
                 data += buffer.toString();
                 bytesRead++;
             }
-            resolve({data, isLineEnd, bytesRead}) //возвращаем чанк из 500 символов 
+            resolve({data, isLineEnd, bytesRead, isFileEnd}) //возвращаем чанк из 500 символов 
         });
     })
 }
 
-function fileWriter(charlist){
+function fileWriter(charlist){ //функция записывает символы в output 
     const file = fs.createWriteStream(outputFile, {flags: 'a'});
     for (let i =0; i < Object.keys(charlist).length;i++){
-        let dataString = Object.keys(charlist)[i].repeat(Object.values(charlist)[i])
+        let dataString = Object.keys(charlist)[i].repeat(Object.values(charlist)[i]) // если наш лист {'a': 1,'b': 2} то берем a и вставляем 1 раз, b два раза 
         file.write(dataString)
     }
     file.write('\n')
@@ -58,19 +66,22 @@ function fileWriter(charlist){
 }
 
 async function main(){
-    let num = 0
-    for (let i = 0; i < 4; i ++){
-        let gav = true
+    let num = 0 // для отступов
+    let isFileEnd = true
+    while (isFileEnd){ //выполняем до момента пока не кончится файл
+        let islineEnd = true
         let charlist = {}
-        while (gav){
-            let chankedString = await chankCreator(num).then((result) => {
+        while (islineEnd && isFileEnd){
+            let chankedString = await chankCreator(num).then((result) => { //возвращаем 500 символов из файла
                 if (result){
-                    gav = !result.isLineEnd
+                    islineEnd = !result.isLineEnd
                     num += result.bytesRead
+                    isFileEnd = !result.isFileEnd
                     return result.data
                 }
             })
-            charlist = lineSorter(chankedString, charlist)
+            charlist = lineSorter(chankedString, charlist) //сортируем их в наш лист
+            console.log(charlist, 'fff')
         }  
         fileWriter(charlist)
     }  
