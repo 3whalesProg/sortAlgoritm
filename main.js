@@ -55,10 +55,16 @@ async function chankCreator(startPosition){ //будем ассинхронно 
     })
 }
 
-function fileWriter(charlist){ //функция записывает символы в output 
+function chankWriter(charlist){ //функция записывает символы в output 
     const file = fs.createWriteStream(outputFile, {flags: 'a'});
+    let dataString
     for (let i =0; i < Object.keys(charlist).length;i++){
-        let dataString = Object.keys(charlist)[i].repeat(Object.values(charlist)[i]) // если наш лист {'a': 1,'b': 2} то берем a и вставляем 1 раз, b два раза 
+        while(Object.values(charlist)[i]>500){
+            dataString = Object.keys(charlist)[i].repeat(500)
+            charlist[Object.keys(charlist)[i]] -= 500  // если наш лист {'a': 1,'b': 2} то берем a и вставляем 1 раз, b два раза и т.д
+            file.write(dataString) //записываем чанками по 500 пока количество букв будет больше 500
+        }
+        dataString = Object.keys(charlist)[i].repeat(Object.values(charlist)[i])
         file.write(dataString)
     }
     file.write('\n')
@@ -83,7 +89,7 @@ async function main(){
             charlist = lineSorter(chankedString, charlist) //сортируем их в наш лист
             console.log(charlist, 'fff')
         }  
-        fileWriter(charlist)
+        chankWriter(charlist)
     }  
 }
 
